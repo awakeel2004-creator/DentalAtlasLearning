@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnatomyPreset, OriginalAnatomyViewer } from "./components/OriginalAnatomyViewer";
 
 const publicBasePath = process.env.NEXT_PUBLIC_PAGES_BASE_PATH ?? "";
 
@@ -677,7 +678,7 @@ function modelForTooth(tooth: Tooth): Model3D {
 }
 
 export default function Home() {
-  const teeth = useMemo(makeTeeth, []);
+  const teeth = useMemo(() => makeTeeth(), []);
   const [module, setModule] = useState("dentition");
   const [selected, setSelected] = useState(teeth[2]);
   const [quiz, setQuiz] = useState(false);
@@ -727,7 +728,7 @@ export default function Home() {
         <section className="workspace">
           <div className="crumbs">Atlas / <b>{quiz ? "Quiz mode" : title}</b></div>
           {quiz ? (
-            <Quiz selected={selected} answer={answer} setAnswer={setAnswer} />
+            <Quiz answer={answer} setAnswer={setAnswer} />
           ) : module === "dentition" ? (
             <DentalViewer teeth={teeth} selected={selected} setSelected={setSelected} />
           ) : module === "body" || module === "head" ? (
@@ -748,7 +749,7 @@ export default function Home() {
   );
 }
 
-function DentalViewer({ teeth, selected, setSelected }: any) {
+function DentalViewer({ teeth, selected, setSelected }: { teeth: Tooth[]; selected: Tooth; setSelected: (tooth: Tooth) => void }) {
   const [archModelIndex, setArchModelIndex] = useState(0);
   const [isolated, setIsolated] = useState(false);
   const isolatedModel = modelForTooth(selected);
@@ -765,7 +766,7 @@ function DentalViewer({ teeth, selected, setSelected }: any) {
             </div>
             <span className="liveDot">{isolated ? "Single-tooth view" : "Full-arch view"}</span>
           </div>
-          <ModelFrame model={model} label={isolated ? `FDI ${selected.fdi} · Universal ${selected.universal}` : model.title} />
+          <ModelFrame model={model} label={isolated ? `FDI ${selected.fdi} · Universal ${selected.universal}` : model.title} originalPreset={isolated ? "tooth" : "dentition"} />
           <div className="modelTabs archModelTabs" aria-label="Complete dentition model views">
             {fullArchModels.map((m, i) => (
               <button key={m.uid} className={!isolated && archModelIndex === i ? "on" : ""} onClick={() => { setArchModelIndex(i); setIsolated(false); }}>{m.title}</button>
@@ -823,23 +824,46 @@ function LearningBlock({ label, text }: { label: string; text: string }) {
   return <div className="learningBlock"><b>{label}</b><p>{text}</p></div>;
 }
 
-function ModelFrame({ model, label }: { model: Model3D; label?: string }) {
+function inferOriginalPreset(model: Model3D, label?: string): AnatomyPreset {
+  const text = `${model.title} ${label ?? ""}`.toLowerCase();
+  if (/dentition|occlusion|eruption|maxilla and mandible|orofacial/.test(text)) return "dentition";
+  if (/tooth|molar|incisor|canine|premolar|pulp|endodont/.test(text)) return /section|pulp|endodont|histolog/.test(text) ? "tissue" : "tooth";
+  if (/vertebr|spine|cervical|thoracic|lumbar|sacral|atlas|axis/.test(text)) return "spine";
+  if (/head|neck|skull|crani|facial|mandible|maxilla|oral cavity|pharynx/.test(text)) return "head";
+  if (/skeleton|osteology|bone/.test(text)) return "skeleton";
+  if (/histolog|tissue|periodont/.test(text)) return "tissue";
+  return "body";
+}
+
+function ModelFrame({ model, label, originalPreset }: { model: Model3D; label?: string; originalPreset?: AnatomyPreset }) {
+  const [view, setView] = useState<"original" | "classic">("original");
+  const preset = originalPreset ?? inferOriginalPreset(model, label);
   return <div className="modelStage">
-    <iframe
-      key={model.uid}
-      title={model.title}
-      src={`https://sketchfab.com/models/${model.uid}/embed?autostart=1&ui_theme=dark&dnt=1&ui_infos=0`}
-      allow="autoplay; fullscreen; xr-spatial-tracking"
-      allowFullScreen
-    />
-    <div className="modelMeta">
-      <span><b>{label ?? model.title}</b><small>{model.title}</small></span>
-      <span className="modelControls">Drag to rotate · Scroll/pinch to zoom · Fullscreen available</span>
+    <div className="viewerModeSwitch" aria-label="Choose model version">
+      <button className={view === "original" ? "active" : ""} onClick={() => setView("original")}><span>◆</span> Original 3D</button>
+      <button className={view === "classic" ? "active" : ""} onClick={() => setView("classic")}><span>↗</span> Classic model</button>
     </div>
-    <div className="modelCredit">
-      <span>3D model: {model.creator}. Hosted by Sketchfab. {model.note}</span>
-      <a href={`https://sketchfab.com/3d-models/${model.uid}`} target="_blank" rel="noreferrer">Model source ↗</a>
-    </div>
+    {view === "original" ? (
+      <OriginalAnatomyViewer preset={preset} label={label ?? model.title} />
+    ) : (
+      <>
+        <iframe
+          key={model.uid}
+          title={model.title}
+          src={`https://sketchfab.com/models/${model.uid}/embed?autostart=1&ui_theme=dark&dnt=1&ui_infos=0`}
+          allow="autoplay; fullscreen; xr-spatial-tracking"
+          allowFullScreen
+        />
+        <div className="modelMeta">
+          <span><b>{label ?? model.title}</b><small>{model.title}</small></span>
+          <span className="modelControls">Drag to rotate · Scroll/pinch to zoom · Fullscreen available</span>
+        </div>
+        <div className="modelCredit">
+          <span>Classic 3D model: {model.creator}. Hosted by Sketchfab. {model.note}</span>
+          <a href={`https://sketchfab.com/3d-models/${model.uid}`} target="_blank" rel="noreferrer">Model source ↗</a>
+        </div>
+      </>
+    )}
   </div>;
 }
 
@@ -967,7 +991,7 @@ function SkeletonAtlas() {
         <div><span className="selectedPill">OSTEOLOGY LAB</span><h1>Complete skeleton & vertebral column</h1><p>Whole-body osteology · all 33 vertebral levels · joints · movement · dental relevance</p></div>
         <span className="liveDot">Interactive 3D</span>
       </div>
-      <ModelFrame model={skeletonModels[modelIndex]} label={modelIndex === 1 ? `${selected.id} · ${selected.pattern}` : undefined} />
+      <ModelFrame model={skeletonModels[modelIndex]} label={modelIndex === 1 ? `${selected.id} · ${selected.pattern}` : undefined} originalPreset={modelIndex === 0 ? "skeleton" : "spine"} />
       <div className="modelTabs skeletonModelTabs">
         {skeletonModels.map((model, i) => <button key={model.uid} className={modelIndex === i ? "on" : ""} onClick={() => setModelIndex(i)}>{model.title}</button>)}
       </div>
@@ -1048,7 +1072,7 @@ function BodyAtlas({ headOnly }: { headOnly: boolean }) {
   return <div className="bodyGrid">
     <section className="bodyViewer">
       <div className="viewerHeading"><div><h1>{headOnly ? "Head & neck anatomy" : "Whole-body anatomy"}</h1><p>{headOnly ? "Detailed bones · spaces · muscles · nerves" : "Interactive skeletal and regional foundations"}</p></div><span className="liveDot">True 3D viewer</span></div>
-      <ModelFrame model={model} />
+      <ModelFrame model={model} originalPreset={headOnly ? "head" : "body"} />
       <div className="modelTabs">{models.map((m, i) => <button key={m.uid} className={modelIndex === i ? "on" : ""} onClick={() => setModelIndex(i)}>{m.title}</button>)}</div>
     </section>
     <aside className="systemPanel"><span className="selectedPill">CURRICULUM MAP</span><h2>{headOnly ? "Regional anatomy" : "Body systems"}</h2><p>Select a system to focus the atlas and clinical links.</p>
@@ -1069,7 +1093,7 @@ function Histology() {
     <div className="tissueTabs">{tissues.map((t, i) => <button className={selected === i ? "on" : ""} onClick={() => setSelected(i)} key={t[0]}><span>{i + 1}</span>{t[0]}</button>)}</div>
     <section className="tissue3d">
       <div><span className="selectedPill">3D TISSUE RELATIONSHIPS</span><h2>From crown surface to pulp</h2><p>Rotate the section to connect the tissue layers with the microscopic field above. Three-dimensional form and histology answer different questions, so both are included.</p></div>
-      <ModelFrame model={toothTissueModel} />
+      <ModelFrame model={toothTissueModel} originalPreset="tissue" />
     </section>
   </div>;
 }
@@ -1084,9 +1108,9 @@ function Pathology() {
   </div>;
 }
 
-function Quiz({ selected, answer, setAnswer }: any) {
+function Quiz({ answer, setAnswer }: { answer: boolean | null; setAnswer: (answer: boolean) => void }) {
   return <div className="quizPage"><span className="selectedPill">ACTIVE RECALL</span><h1>Identify the tooth</h1><p>Use morphology and location before revealing the answer.</p>
-    <div className="quizCard"><div className="quizModel"><ModelFrame model={toothModels.maxillary6} /></div><div className="quizPrompt"><span>QUESTION 01 / 01</span><h2>This maxillary tooth usually has three roots, four major cusps, an oblique ridge, and may show a cusp of Carabelli. Which is it?</h2>
+    <div className="quizCard"><div className="quizModel"><ModelFrame model={toothModels.maxillary6} originalPreset="tooth" /></div><div className="quizPrompt"><span>QUESTION 01 / 01</span><h2>This maxillary tooth usually has three roots, four major cusps, an oblique ridge, and may show a cusp of Carabelli. Which is it?</h2>
       {["First molar", "Second premolar", "Canine", "Mandibular first molar"].map((a, i) => <button onClick={() => setAnswer(i === 0)} className={answer !== null && i === 0 ? "correct" : ""} key={a}>{String.fromCharCode(65 + i)}. {a}</button>)}
       {answer !== null && <div className={answer ? "feedback good" : "feedback"}>{answer ? "Correct — now identify the oblique ridge and cusp of Carabelli." : "Not quite. Three roots strongly suggests a maxillary molar."}</div>}
     </div></div>

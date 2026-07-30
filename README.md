@@ -1,5 +1,34 @@
 # Dental School Atlas
 
+An interactive, static learning atlas for dental anatomy, head and neck anatomy,
+whole-body anatomy, osteology, histology, and foundational oral pathology.
+
+## Two model modes
+
+- **Original 3D** is a native WebGL educational reconstruction built for this
+  project. It supports selectable structures, layer visibility, explode mode,
+  transparency, motion, labels, definitions, and functions.
+- **Classic model** preserves the previously embedded third-party model in each
+  section for comparison and additional study.
+
+The original geometry is intentionally identified in the interface as an
+invented educational reconstruction. It is not a patient scan, validated
+anatomical specimen, diagnostic product, or surgical planning tool.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+The production build is a static export suitable for GitHub Pages:
+
+```bash
+npm run lint
+npm run build
+```
+
 Interactive dental anatomy, skeletal anatomy, histology, and pathology study atlas.
 
 ## Free public deployment
