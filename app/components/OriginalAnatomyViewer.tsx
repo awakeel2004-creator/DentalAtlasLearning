@@ -328,6 +328,127 @@ function Spine({
   );
 }
 
+const skullBones: Array<{ name: string; position: [number, number, number]; scale: [number, number, number]; color?: string }> = [
+  { name: "Frontal bone", position: [0, 1.72, 0.48], scale: [0.92, 0.55, 0.62] },
+  { name: "Left parietal bone", position: [-0.52, 2.08, -0.05], scale: [0.62, 0.75, 0.74] },
+  { name: "Right parietal bone", position: [0.52, 2.08, -0.05], scale: [0.62, 0.75, 0.74] },
+  { name: "Occipital bone", position: [0, 1.72, -0.68], scale: [0.82, 0.7, 0.35] },
+  { name: "Left temporal bone", position: [-0.82, 1.42, -0.12], scale: [0.38, 0.5, 0.52], color: "#ded1b4" },
+  { name: "Right temporal bone", position: [0.82, 1.42, -0.12], scale: [0.38, 0.5, 0.52], color: "#ded1b4" },
+  { name: "Sphenoid bone", position: [0, 1.32, 0.02], scale: [0.88, 0.22, 0.45], color: "#d3bb8d" },
+  { name: "Ethmoid bone", position: [0, 1.36, 0.55], scale: [0.18, 0.32, 0.2], color: "#d8c49c" },
+  { name: "Left zygomatic bone", position: [-0.67, 0.96, 0.56], scale: [0.3, 0.3, 0.26] },
+  { name: "Right zygomatic bone", position: [0.67, 0.96, 0.56], scale: [0.3, 0.3, 0.26] },
+  { name: "Left maxilla", position: [-0.28, 0.72, 0.59], scale: [0.42, 0.31, 0.28] },
+  { name: "Right maxilla", position: [0.28, 0.72, 0.59], scale: [0.42, 0.31, 0.28] },
+  { name: "Left nasal bone", position: [-0.1, 1.12, 0.8], scale: [0.11, 0.25, 0.08] },
+  { name: "Right nasal bone", position: [0.1, 1.12, 0.8], scale: [0.11, 0.25, 0.08] },
+  { name: "Left lacrimal bone", position: [-0.24, 1.2, 0.68], scale: [0.07, 0.15, 0.08], color: "#d4c39f" },
+  { name: "Right lacrimal bone", position: [0.24, 1.2, 0.68], scale: [0.07, 0.15, 0.08], color: "#d4c39f" },
+  { name: "Left palatine bone", position: [-0.18, 0.56, 0.24], scale: [0.2, 0.08, 0.34], color: "#d6c39c" },
+  { name: "Right palatine bone", position: [0.18, 0.56, 0.24], scale: [0.2, 0.08, 0.34], color: "#d6c39c" },
+  { name: "Left inferior nasal concha", position: [-0.16, 0.92, 0.7], scale: [0.08, 0.2, 0.08], color: "#d5bc90" },
+  { name: "Right inferior nasal concha", position: [0.16, 0.92, 0.7], scale: [0.08, 0.2, 0.08], color: "#d5bc90" },
+  { name: "Vomer", position: [0, 0.85, 0.67], scale: [0.05, 0.3, 0.14], color: "#cfb98f" },
+];
+
+function SkullAssembly({
+  selected,
+  onSelect,
+  opacity,
+  explode,
+}: {
+  selected: string | null;
+  onSelect: (info: PartInfo) => void;
+  opacity: number;
+  explode: number;
+}) {
+  return (
+    <group position={[0, -0.85, 0]} scale={1.12}>
+      {skullBones.map((bone, index) => {
+        const direction = new THREE.Vector3(...bone.position).sub(new THREE.Vector3(0, 1.2, 0)).normalize().multiplyScalar(explode * 0.22);
+        return (
+          <Pickable key={bone.name} info={partInfo(bone.name, "bone", bone.name.includes("maxilla") ? "maxilla" : "skull")} selected={selected} onSelect={onSelect}>
+            <mesh position={[bone.position[0] + direction.x, bone.position[1] + direction.y, bone.position[2] + direction.z]} scale={bone.scale}>
+              {index < 8 ? <sphereGeometry args={[1, 22, 16]} /> : <boxGeometry args={[1, 1, 1]} />}
+              <Material layer="bone" opacity={opacity} color={bone.color} />
+            </mesh>
+          </Pickable>
+        );
+      })}
+      <Pickable info={partInfo("Mandible", "bone", "mandible")} selected={selected} onSelect={onSelect}>
+        <mesh position={[0, 0.22 - explode * 0.22, 0.47]} rotation={[0, 0, Math.PI]} scale={[0.78, 0.43, 0.68]}><torusGeometry args={[1, 0.2, 10, 32, Math.PI]} /><Material layer="bone" opacity={opacity} /></mesh>
+      </Pickable>
+      <Pickable info={partInfo("Hyoid bone", "bone")} selected={selected} onSelect={onSelect}>
+        <mesh position={[0, -0.55 - explode * 0.28, 0.18]} rotation={[Math.PI / 2, 0, 0]} scale={[0.45, 0.2, 0.2]}><torusGeometry args={[0.65, 0.11, 8, 24, Math.PI]} /><Material layer="bone" opacity={opacity} /></mesh>
+      </Pickable>
+      {["Left malleus", "Left incus", "Left stapes", "Right malleus", "Right incus", "Right stapes"].map((name, index) => {
+        const side = index < 3 ? -1 : 1;
+        const offset = index % 3;
+        return (
+          <Pickable key={name} info={partInfo(name, "bone")} selected={selected} onSelect={onSelect}>
+            <mesh position={[side * (0.55 + explode * 0.25), 1.36 - offset * 0.06, -0.02]} scale={[0.045, 0.065, 0.04]}><sphereGeometry args={[1, 10, 8]} /><Material layer="bone" opacity={opacity} color="#ceb988" /></mesh>
+          </Pickable>
+        );
+      })}
+      <group position={[0, 0.55, 0.65]} scale={0.24}>
+        <DentalArch selected={selected} onSelect={onSelect} opacity={opacity} explode={explode} layers={new Set<Layer>(["teeth"])} />
+      </group>
+    </group>
+  );
+}
+
+const handBoneNames = [
+  "Scaphoid", "Lunate", "Triquetrum", "Pisiform", "Trapezium", "Trapezoid", "Capitate", "Hamate",
+  ...Array.from({ length: 5 }, (_, i) => `metacarpal ${i + 1}`),
+  ...[2, 3, 3, 3, 3].flatMap((count, digit) => Array.from({ length: count }, (_, i) => `${["proximal", "middle", "distal"][count === 2 && i === 1 ? 2 : i]} phalanx of digit ${digit + 1}`)),
+];
+const footBoneNames = [
+  "Talus", "Calcaneus", "Navicular", "Cuboid", "Medial cuneiform", "Intermediate cuneiform", "Lateral cuneiform",
+  ...Array.from({ length: 5 }, (_, i) => `metatarsal ${i + 1}`),
+  ...[2, 3, 3, 3, 3].flatMap((count, digit) => Array.from({ length: count }, (_, i) => `${["proximal", "middle", "distal"][count === 2 && i === 1 ? 2 : i]} phalanx of toe ${digit + 1}`)),
+];
+
+function SmallBoneCluster({
+  side,
+  kind,
+  selected,
+  onSelect,
+  opacity,
+  explode,
+}: {
+  side: -1 | 1;
+  kind: "hand" | "foot";
+  selected: string | null;
+  onSelect: (info: PartInfo) => void;
+  opacity: number;
+  explode: number;
+}) {
+  const names = kind === "hand" ? handBoneNames : footBoneNames;
+  const originX = side * (kind === "hand" ? 2.02 + explode * 0.25 : 0.78 + explode * 0.18);
+  const originY = kind === "hand" ? 0.16 : -4.42;
+  return (
+    <group>
+      {names.map((name, index) => {
+        const isRoot = index < (kind === "hand" ? 8 : 7);
+        const digitIndex = isRoot ? index % 4 : (index - (kind === "hand" ? 8 : 7)) % 5;
+        const row = isRoot ? Math.floor(index / 4) : Math.floor((index - (kind === "hand" ? 8 : 7)) / 5);
+        const x = originX + side * ((digitIndex - 2) * 0.075 + (isRoot ? 0 : row * 0.045));
+        const y = originY - (isRoot ? row * 0.08 : 0.12 + row * 0.16);
+        const z = kind === "foot" ? 0.22 + row * 0.08 : row * 0.025;
+        return (
+          <Pickable key={`${side}-${kind}-${name}`} info={partInfo(`${side < 0 ? "Left" : "Right"} ${name}`, "bone")} selected={selected} onSelect={onSelect}>
+            <mesh position={[x, y, z]} scale={isRoot ? [0.07, 0.07, 0.06] : [0.045, 0.12, 0.045]}>
+              <boxGeometry />
+              <Material layer="bone" opacity={opacity} />
+            </mesh>
+          </Pickable>
+        );
+      })}
+    </group>
+  );
+}
+
 function Skeleton({
   selected,
   onSelect,
@@ -345,15 +466,7 @@ function Skeleton({
   if (headOnly) {
     return (
       <group scale={1.35} position={[0, -0.25, 0]}>
-        <Pickable info={partInfo("Cranium", "bone", "skull")} selected={selected} onSelect={onSelect}>
-          <mesh position={[0, 1.25 + gap, 0]} scale={[1.25, 1.35, 1.08]}><sphereGeometry args={[1, 28, 22]} /><Material layer="bone" opacity={Math.min(opacity, 0.62)} /></mesh>
-        </Pickable>
-        <Pickable info={partInfo("Mandible", "bone", "mandible")} selected={selected} onSelect={onSelect}>
-          <mesh position={[0, 0.05 - gap, 0.15]} rotation={[0, 0, Math.PI]} scale={[1.04, 0.58, 0.85]}><torusGeometry args={[1, 0.22, 12, 36, Math.PI]} /><Material layer="bone" opacity={opacity} /></mesh>
-        </Pickable>
-        <group position={[0, 0.42, 0.62]} scale={0.32}>
-          <DentalArch selected={selected} onSelect={onSelect} opacity={opacity} explode={explode} layers={new Set<Layer>(["bone", "teeth"])} />
-        </group>
+        <SkullAssembly selected={selected} onSelect={onSelect} opacity={opacity} explode={explode} />
       </group>
     );
   }
@@ -397,20 +510,26 @@ function Skeleton({
       <BoneBetween a={[0, 3.08, 0.35]} b={[0, 0.45, 0.35]} radius={0.09} name="Sternum" selected={selected} onSelect={onSelect} opacity={opacity} />
       <BoneBetween a={[-0.05, 3.15, 0.25]} b={[-1.05 - gap, 3.02, 0.1]} radius={0.08} name="Left clavicle" selected={selected} onSelect={onSelect} opacity={opacity} />
       <BoneBetween a={[0.05, 3.15, 0.25]} b={[1.05 + gap, 3.02, 0.1]} radius={0.08} name="Right clavicle" selected={selected} onSelect={onSelect} opacity={opacity} />
+      {[-1, 1].map((side) => (
+        <Pickable key={`scapula-${side}`} info={partInfo(`${side < 0 ? "Left" : "Right"} scapula`, "bone")} selected={selected} onSelect={onSelect}>
+          <mesh position={[side * (0.92 + gap), 2.35, -0.42]} rotation={[0.1, 0, side * 0.18]} scale={[0.55, 0.82, 0.08]}><circleGeometry args={[1, 3]} /><Material layer="bone" opacity={opacity} /></mesh>
+        </Pickable>
+      ))}
       {limbs.map((limb) => <BoneBetween key={limb.name} a={limb.a} b={limb.b} radius={limb.r} name={limb.name} selected={selected} onSelect={onSelect} opacity={opacity} />)}
-      <Pickable info={partInfo("Pelvic girdle", "bone")} selected={selected} onSelect={onSelect}>
-        <mesh position={[0, -0.55, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1.45, 0.78, 0.8]}><torusGeometry args={[0.72, 0.18, 12, 36]} /><Material layer="bone" opacity={opacity} /></mesh>
-      </Pickable>
-      {[-1, 1].flatMap((side) => Array.from({ length: 14 }, (_, i) => {
-        const hand = i < 5;
-        const x = side * (2.05 + (hand ? (i - 2) * 0.075 : (i - 9) * 0.07));
-        const y = hand ? 0.08 - (i % 3) * 0.18 : -4.48 - ((i - 5) % 3) * 0.15;
-        return (
-          <Pickable key={`${side}-${i}`} info={partInfo(`${side < 0 ? "Left" : "Right"} ${hand ? "hand" : "foot"} bone ${i + 1}`, "bone")} selected={selected} onSelect={onSelect}>
-            <mesh position={[x, y, hand ? 0 : 0.22]} scale={[0.07, 0.17, 0.07]}><boxGeometry /><Material layer="bone" opacity={opacity} /></mesh>
-          </Pickable>
-        );
-      }))}
+      {[-1, 1].map((side) => (
+        <Pickable key={`hip-${side}`} info={partInfo(`${side < 0 ? "Left" : "Right"} hip bone`, "bone")} selected={selected} onSelect={onSelect}>
+          <mesh position={[side * (0.48 + gap * 0.4), -0.55, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[0.78, 0.78, 0.8]}><torusGeometry args={[0.72, 0.18, 12, 30, Math.PI]} /><Material layer="bone" opacity={opacity} /></mesh>
+        </Pickable>
+      ))}
+      {[-1, 1].map((side) => (
+        <Pickable key={`patella-${side}`} info={partInfo(`${side < 0 ? "Left" : "Right"} patella`, "bone")} selected={selected} onSelect={onSelect}>
+          <mesh position={[side * (0.66 + gap), -2.72, 0.24]} scale={[0.15, 0.22, 0.09]}><sphereGeometry args={[1, 14, 10]} /><Material layer="bone" opacity={opacity} /></mesh>
+        </Pickable>
+      ))}
+      <SmallBoneCluster side={-1} kind="hand" selected={selected} onSelect={onSelect} opacity={opacity} explode={explode} />
+      <SmallBoneCluster side={1} kind="hand" selected={selected} onSelect={onSelect} opacity={opacity} explode={explode} />
+      <SmallBoneCluster side={-1} kind="foot" selected={selected} onSelect={onSelect} opacity={opacity} explode={explode} />
+      <SmallBoneCluster side={1} kind="foot" selected={selected} onSelect={onSelect} opacity={opacity} explode={explode} />
     </group>
   );
 }
@@ -450,8 +569,14 @@ function SoftBody({
           {[-1, 1].map((side) => <Pickable key={`lung-${side}`} info={partInfo(`${side < 0 ? "Left" : "Right"} lung`, "organ", "lung")} selected={selected} onSelect={onSelect}><mesh position={[side * (0.68 + shift), 1.75, 0]} scale={[0.58, 1.18, 0.44]}><sphereGeometry args={[1, 22, 18]} /><Material layer="organ" opacity={Math.min(opacity, 0.62)} color="#c98991" /></mesh></Pickable>)}
           <Pickable info={partInfo("Liver", "organ", "liver")} selected={selected} onSelect={onSelect}><mesh position={[0.48 + shift, 0.12, 0.25]} scale={[1.05, 0.45, 0.58]}><sphereGeometry args={[1, 22, 16]} /><Material layer="organ" opacity={opacity} color="#7f403d" /></mesh></Pickable>
           <Pickable info={partInfo("Stomach", "organ", "stomach")} selected={selected} onSelect={onSelect}><mesh position={[-0.5 - shift, -0.02, 0.2]} rotation={[0, 0, -0.3]} scale={[0.55, 0.82, 0.45]}><sphereGeometry args={[1, 20, 16]} /><Material layer="organ" opacity={opacity} color="#d08c73" /></mesh></Pickable>
+          <Pickable info={partInfo("Pancreas", "organ")} selected={selected} onSelect={onSelect}><mesh position={[-0.05, -0.42, 0.25 + shift]} rotation={[0, 0, Math.PI / 2]} scale={[0.18, 0.72, 0.18]}><capsuleGeometry args={[1, 1, 8, 14]} /><Material layer="organ" opacity={opacity} color="#d4a15e" /></mesh></Pickable>
+          <Pickable info={partInfo("Spleen", "organ")} selected={selected} onSelect={onSelect}><mesh position={[-0.88 - shift, 0.08, -0.05]} scale={[0.27, 0.5, 0.2]}><sphereGeometry args={[1, 18, 14]} /><Material layer="organ" opacity={opacity} color="#844052" /></mesh></Pickable>
+          <Pickable info={partInfo("Gallbladder", "organ")} selected={selected} onSelect={onSelect}><mesh position={[0.55 + shift, -0.28, 0.55]} scale={[0.12, 0.32, 0.12]}><sphereGeometry args={[1, 14, 10]} /><Material layer="organ" opacity={opacity} color="#678552" /></mesh></Pickable>
           {[-1, 1].map((side) => <Pickable key={`kidney-${side}`} info={partInfo(`${side < 0 ? "Left" : "Right"} kidney`, "organ", "kidney")} selected={selected} onSelect={onSelect}><mesh position={[side * (0.62 + shift), -0.75, -0.25]} scale={[0.3, 0.55, 0.23]}><sphereGeometry args={[1, 18, 14]} /><Material layer="organ" opacity={opacity} color="#924a4c" /></mesh></Pickable>)}
           <Pickable info={partInfo("Small and large intestine", "organ")} selected={selected} onSelect={onSelect}><mesh position={[0, -1.45, 0.14]} scale={[0.88, 0.78, 0.4]}><torusKnotGeometry args={[0.55, 0.13, 64, 8, 2, 3]} /><Material layer="organ" opacity={opacity} color="#c98268" /></mesh></Pickable>
+          <Pickable info={partInfo("Urinary bladder", "organ")} selected={selected} onSelect={onSelect}><mesh position={[0, -2.35 - shift, 0.15]} scale={[0.38, 0.42, 0.34]}><sphereGeometry args={[1, 18, 14]} /><Material layer="organ" opacity={Math.min(opacity, 0.7)} color="#c5a56b" /></mesh></Pickable>
+          <Pickable info={partInfo("Thyroid gland", "organ")} selected={selected} onSelect={onSelect}><mesh position={[0, 3.22 + shift, 0.23]} scale={[0.36, 0.22, 0.18]}><torusGeometry args={[0.7, 0.2, 8, 24]} /><Material layer="organ" opacity={opacity} color="#c57a66" /></mesh></Pickable>
+          <Pickable info={partInfo("Trachea", "organ")} selected={selected} onSelect={onSelect}><mesh position={[0, 2.65, 0.05]} scale={[0.14, 0.66, 0.14]}><cylinderGeometry args={[1, 1, 1, 16]} /><Material layer="organ" opacity={Math.min(opacity, 0.75)} color="#84aaa5" /></mesh></Pickable>
         </>
       )}
       {layers.has("nerve") && (
