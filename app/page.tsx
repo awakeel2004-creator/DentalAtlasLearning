@@ -1,9 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnatomyPreset, OriginalAnatomyViewer } from "./components/OriginalAnatomyViewer";
 
 const publicBasePath = process.env.NEXT_PUBLIC_PAGES_BASE_PATH ?? "";
+
+type AnatomyPreset =
+  | "dentition"
+  | "tooth"
+  | "head"
+  | "skeleton"
+  | "spine"
+  | "body"
+  | "tissue";
 
 type Tooth = {
   fdi: number;
@@ -665,6 +673,81 @@ const vertebrae: VertebraRecord[] = [
   ...makeCoccygealVertebrae(),
 ];
 
+type BoneRecord = {
+  id: string;
+  name: string;
+  region: string;
+  division: "Axial" | "Appendicular";
+  count: number;
+  landmarks: string;
+  articulations: string;
+  function: string;
+  dental: string;
+};
+
+const sharedLimbDental = "Connect this bone to operator posture, instrument control, patient transfers, positioning, and recognition of musculoskeletal limitations during care.";
+
+const boneAtlas: BoneRecord[] = [
+  { id: "frontal", name: "Frontal bone", region: "Skull", division: "Axial", count: 1, landmarks: "Frontal squama, orbital plates, supraorbital margins and foramina, frontal sinus, glabella, and zygomatic processes.", articulations: "Parietal, sphenoid, ethmoid, nasal, maxilla, lacrimal, and zygomatic bones.", function: "Forms the forehead, orbital roofs, and anterior cranial fossa; protects frontal lobes and supports the face.", dental: "Orient the orbit, frontal sinus, anterior cranial fossa, and supraorbital neurovascular exit on head-and-neck imaging." },
+  { id: "parietal", name: "Parietal bones", region: "Skull", division: "Axial", count: 2, landmarks: "Parietal eminence, superior and inferior temporal lines, grooves for middle meningeal vessels, and four sutural borders.", articulations: "Opposite parietal, frontal, occipital, temporal, and sphenoid bones.", function: "Form most of the cranial vault and protect the cerebral hemispheres.", dental: "Provides cranial orientation for cephalometry, trauma review, and temporal-fossa relationships." },
+  { id: "temporal", name: "Temporal bones", region: "Skull", division: "Axial", count: 2, landmarks: "Squamous, petrous, mastoid, and tympanic parts; zygomatic process, mandibular fossa, articular eminence, styloid and mastoid processes, carotid canal, and internal acoustic meatus.", articulations: "Parietal, occipital, sphenoid, zygomatic, and mandible at the temporomandibular joint.", function: "Houses hearing and balance organs, contributes to the cranial base and arch, and forms the bony part of the TMJ.", dental: "Central to TMJ anatomy, facial-nerve and carotid pathways, mastoid landmarks, and interpretation of panoramic and CBCT images." },
+  { id: "occipital", name: "Occipital bone", region: "Skull", division: "Axial", count: 1, landmarks: "Foramen magnum, occipital condyles, hypoglossal canals, external occipital protuberance, nuchal lines, and clivus contribution.", articulations: "Parietal, temporal, sphenoid, and atlas (C1).", function: "Forms the posterior cranial vault and base, protects the cerebellum and brainstem, and transfers skull weight to C1.", dental: "Relates head-rest position to the occiput–C1 joint and helps orient the posterior cranial base on imaging." },
+  { id: "sphenoid", name: "Sphenoid bone", region: "Skull", division: "Axial", count: 1, landmarks: "Body and sphenoid sinus, sella turcica, greater and lesser wings, pterygoid processes, optic canals, superior orbital fissures, and foramina rotundum, ovale, and spinosum.", articulations: "All other cranial bones plus zygomatic, palatine, and vomer; acts as a central cranial-base keystone.", function: "Links cranial and facial skeletons, supports the pituitary, forms orbit and cranial fossae, and transmits major nerves and vessels.", dental: "Essential for tracing V2 through foramen rotundum, V3 through foramen ovale, maxillary-artery relations, and pterygoid muscle attachments." },
+  { id: "ethmoid", name: "Ethmoid bone", region: "Skull", division: "Axial", count: 1, landmarks: "Cribriform plate, crista galli, perpendicular plate, ethmoidal labyrinths, superior and middle nasal conchae, and ethmoidal air cells.", articulations: "Frontal, sphenoid, vomer, nasal, maxilla, lacrimal, palatine, and inferior nasal conchae.", function: "Forms the nasal roof and septum, medial orbital walls, and olfactory passageways.", dental: "Connects nasal-cavity anatomy, olfaction, ethmoidal sinuses, orbit, and superior pathways of infection spread." },
+  { id: "maxilla", name: "Maxillae", region: "Skull", division: "Axial", count: 2, landmarks: "Body and maxillary sinus; frontal, zygomatic, alveolar, and palatine processes; infraorbital foramen; incisive canal; canine fossa and tuberosity.", articulations: "Frontal, ethmoid, nasal, lacrimal, zygomatic, palatine, inferior nasal concha, vomer, and opposite maxilla; holds maxillary teeth.", function: "Forms the upper jaw, anterior hard palate, orbital floor, lateral nasal wall, and support for maxillary dentition.", dental: "Critical for local anesthesia, sinus-root relationships, implants, extractions, cleft anatomy, midface trauma, and CBCT interpretation." },
+  { id: "mandible", name: "Mandible", region: "Skull", division: "Axial", count: 1, landmarks: "Body, ramus, angle, symphysis, mental protuberance and foramen, mandibular foramen and canal, lingula, mylohyoid line, condylar and coronoid processes.", articulations: "Paired temporal bones at the TMJs; supports mandibular teeth through its alveolar process.", function: "Forms the movable lower jaw, transmits masticatory load, and anchors muscles of mastication, tongue, floor of mouth, and facial expression.", dental: "Foundational for inferior alveolar and mental anesthesia, extraction and implant risk, TMJ mechanics, fracture patterns, and panoramic/CBCT anatomy." },
+  { id: "zygomatic", name: "Zygomatic bones", region: "Skull", division: "Axial", count: 2, landmarks: "Frontal, temporal, and maxillary processes; orbital surface; zygomaticofacial and zygomaticotemporal foramina.", articulations: "Frontal, sphenoid, temporal, and maxilla.", function: "Forms the cheek prominence, lateral orbital wall and floor, and part of the zygomatic arch.", dental: "Orient midface contour, zygomatic buttress, orbit, masseter origin, trauma patterns, and posterior maxillary imaging." },
+  { id: "nasal", name: "Nasal bones", region: "Skull", division: "Axial", count: 2, landmarks: "Small paired plates forming the bridge of the nose, with superior, inferior, medial, and lateral borders.", articulations: "Frontal, ethmoid, maxilla, and opposite nasal bone.", function: "Supports the upper external nose and contributes to the roof of the anterior nasal aperture.", dental: "Useful in facial examination, trauma orientation, nasomaxillary relationships, and cephalometric landmarks." },
+  { id: "lacrimal", name: "Lacrimal bones", region: "Skull", division: "Axial", count: 2, landmarks: "Lacrimal groove and posterior lacrimal crest on the smallest facial bone.", articulations: "Frontal, ethmoid, maxilla, and inferior nasal concha.", function: "Forms part of the medial orbit and lacrimal fossa for tear drainage.", dental: "Links the orbit, nasal cavity, and nasolacrimal drainage pathway in facial anatomy and imaging." },
+  { id: "palatine", name: "Palatine bones", region: "Skull", division: "Axial", count: 2, landmarks: "Horizontal and perpendicular plates, pyramidal process, greater and lesser palatine foramina, and sphenopalatine notch.", articulations: "Maxilla, sphenoid, ethmoid, inferior nasal concha, vomer, and opposite palatine bone.", function: "Forms the posterior hard palate, lateral nasal wall, and small parts of the orbit and pterygopalatine fossa.", dental: "Essential for greater and lesser palatine anesthesia, palatal surgery, nasal relations, and pterygopalatine pathways." },
+  { id: "inferior-concha", name: "Inferior nasal conchae", region: "Skull", division: "Axial", count: 2, landmarks: "Curved lamina with lacrimal, ethmoidal, and maxillary processes projecting from the lateral nasal wall.", articulations: "Maxilla, lacrimal, ethmoid, and palatine bones.", function: "Increases nasal surface area and creates the inferior meatus for conditioning inspired air.", dental: "Supports understanding of nasal airflow, inferior-meatus anatomy, and the nasolacrimal duct opening." },
+  { id: "vomer", name: "Vomer", region: "Skull", division: "Axial", count: 1, landmarks: "Thin plow-shaped plate with superior alae and a free posterior border.", articulations: "Sphenoid, ethmoid, maxillae, and palatine bones; joins septal cartilage anteriorly.", function: "Forms the posteroinferior bony nasal septum.", dental: "Helps orient the nasal septum, hard palate, choanae, and midline on maxillofacial imaging." },
+  { id: "malleus", name: "Mallei", region: "Auditory & hyoid", division: "Axial", count: 2, landmarks: "Head, neck, manubrium, and anterior and lateral processes.", articulations: "Incus at a synovial joint; manubrium attaches to the tympanic membrane.", function: "Transfers tympanic-membrane vibration to the incus.", dental: "Provides context for temporal-bone anatomy and differentiating otologic from referred craniofacial symptoms." },
+  { id: "incus", name: "Incudes", region: "Auditory & hyoid", division: "Axial", count: 2, landmarks: "Body with short and long limbs and a lenticular process.", articulations: "Malleus and stapes.", function: "Relays and mechanically transforms sound vibration through the middle ear.", dental: "Supports temporal-bone and ear relationships relevant to craniofacial pain history." },
+  { id: "stapes", name: "Stapedes", region: "Auditory & hyoid", division: "Axial", count: 2, landmarks: "Head, neck, anterior and posterior crura, and footplate.", articulations: "Incus; footplate occupies the oval window.", function: "Transmits ossicular vibration into inner-ear fluid.", dental: "Completes the middle-ear chain adjacent to the cranial base and facial-nerve course." },
+  { id: "hyoid", name: "Hyoid bone", region: "Auditory & hyoid", division: "Axial", count: 1, landmarks: "Body, greater cornua, and lesser cornua; typically near the C3 level.", articulations: "No direct bony articulation; suspended by muscles and stylohyoid ligaments.", function: "Provides a mobile anchor for tongue, suprahyoid, infrahyoid, pharyngeal, and laryngeal functions.", dental: "Central to swallowing, tongue position, airway assessment, floor-of-mouth anatomy, and cephalometric interpretation." },
+  { id: "cervical-group", name: "Cervical vertebrae C1–C7", region: "Vertebral column", division: "Axial", count: 7, landmarks: "Atlas, axis and five subaxial vertebrae; transverse foramina, uncinate processes, and a generally lordotic regional curve.", articulations: "Occiput above, thoracic column below, intervertebral discs from C2–C7, paired facets, and specialized C1–C2 joints.", function: "Supports and positions the head while protecting the cord and permitting substantial flexion, extension, rotation, and lateral flexion.", dental: "Directly affects head-rest positioning, airway alignment, cervical pain, vertebral-artery relations, and operator posture. Use the individual level selector below." },
+  { id: "thoracic-group", name: "Thoracic vertebrae T1–T12", region: "Vertebral column", division: "Axial", count: 12, landmarks: "Costal facets, long inferiorly directed spinous processes, relatively circular canals, and a kyphotic regional curve.", articulations: "C7 above, L1 below, discs and facets at adjacent levels, and ribs at costovertebral and costotransverse joints.", function: "Supports the thoracic cage, protects the cord, and favors rotation while limiting flexion and extension.", dental: "Thoracic posture changes scapular and cervical position, breathing mechanics, and sustained operator loading." },
+  { id: "lumbar-group", name: "Lumbar vertebrae L1–L5", region: "Vertebral column", division: "Axial", count: 5, landmarks: "Large kidney-shaped bodies, triangular canals, short broad spinous processes, and mammillary and accessory processes.", articulations: "T12 above, sacrum below, with thick discs and predominantly sagittal facets.", function: "Carries large axial loads and permits flexion and extension while limiting rotation.", dental: "Lumbar support and pelvic position determine whether the operator can maintain a neutral thoracic and cervical posture." },
+  { id: "sacrum", name: "Sacrum", region: "Vertebral column", division: "Axial", count: 1, landmarks: "Five fused segments, promontory, ala, sacral canal and hiatus, anterior and posterior foramina, auricular surfaces, and median/intermediate/lateral crests.", articulations: "L5, coccyx, and both hip bones at the sacroiliac joints.", function: "Transfers trunk weight into the pelvic girdle and forms the posterior pelvic wall.", dental: "Provides the base for stable seated posture; sacropelvic position influences lumbar, thoracic, and cervical alignment." },
+  { id: "coccyx", name: "Coccyx", region: "Vertebral column", division: "Axial", count: 1, landmarks: "Usually four fused rudimentary segments with coccygeal cornua on Co1.", articulations: "Sacrum at the sacrococcygeal joint.", function: "Anchors pelvic-floor muscles and ligaments and supports load in some seated positions.", dental: "Patient and operator seating comfort can influence posture during long appointments." },
+  { id: "sternum", name: "Sternum", region: "Thoracic cage", division: "Axial", count: 1, landmarks: "Manubrium, jugular and clavicular notches, sternal angle, body, and xiphoid process.", articulations: "Clavicles and costal cartilages of ribs 1–7 directly; rib 2 aligns with the sternal angle.", function: "Protects mediastinal structures and anchors ribs and pectoral-girdle structures.", dental: "Surface landmarks support cardiopulmonary examination and emergency orientation." },
+  { id: "ribs", name: "Ribs 1–12", region: "Thoracic cage", division: "Axial", count: 24, landmarks: "Head, neck, tubercle, angle, shaft, costal groove; ribs 1–7 true, 8–10 false, and 11–12 floating.", articulations: "Thoracic vertebral bodies and transverse processes; anteriorly through costal cartilage according to rib class.", function: "Protect thoracic organs and change thoracic dimensions during ventilation.", dental: "Connects respiratory mechanics, patient positioning, chest observation, and thoracic posture." },
+  { id: "clavicle", name: "Clavicles", region: "Pectoral girdle", division: "Appendicular", count: 2, landmarks: "Sternal and acromial ends, conoid tubercle, trapezoid line, and subclavian groove.", articulations: "Sternum at the sternoclavicular joint and scapular acromion at the acromioclavicular joint.", function: "Acts as a strut holding the shoulder laterally and transmits upper-limb forces to the axial skeleton.", dental: "Shoulder position and clavicular elevation affect neck loading and working posture." },
+  { id: "scapula", name: "Scapulae", region: "Pectoral girdle", division: "Appendicular", count: 2, landmarks: "Spine, acromion, coracoid, glenoid cavity, supraspinous/infraspinous/subscapular fossae, borders, and angles.", articulations: "Humerus at the glenohumeral joint and clavicle at the acromioclavicular joint; glides functionally on the thoracic wall.", function: "Positions the glenoid and provides broad muscle attachments for shoulder and arm control.", dental: "Scapular stability is central to reducing neck and shoulder fatigue during fine dental work." },
+  { id: "humerus", name: "Humeri", region: "Upper limb", division: "Appendicular", count: 2, landmarks: "Head, anatomic/surgical necks, greater and lesser tubercles, deltoid tuberosity, radial groove, capitulum, trochlea, epicondyles, and fossae.", articulations: "Scapula proximally; radius and ulna distally.", function: "Forms the arm lever and supports wide shoulder motion plus elbow flexion and extension.", dental: sharedLimbDental },
+  { id: "radius", name: "Radii", region: "Upper limb", division: "Appendicular", count: 2, landmarks: "Head, neck, radial tuberosity, interosseous border, ulnar notch, styloid process, and dorsal tubercle.", articulations: "Humerus, ulna proximally and distally, scaphoid, and lunate.", function: "Rotates around the ulna in pronation/supination and transmits much of the wrist load to the elbow.", dental: sharedLimbDental },
+  { id: "ulna", name: "Ulnae", region: "Upper limb", division: "Appendicular", count: 2, landmarks: "Olecranon, coronoid process, trochlear and radial notches, ulnar tuberosity, head, and styloid process.", articulations: "Humerus and radius; separated from direct carpal contact by the articular disc.", function: "Provides the primary hinge relationship at the elbow and stabilizes forearm rotation.", dental: sharedLimbDental },
+  ...[
+    ["scaphoid", "Scaphoids", "Proximal radial carpal; tubercle and waist.", "Radius, lunate, capitate, trapezium, and trapezoid."],
+    ["lunate", "Lunates", "Crescent-shaped proximal central carpal.", "Radius, scaphoid, triquetrum, capitate, and hamate."],
+    ["triquetrum", "Triquetra", "Pyramidal proximal ulnar carpal.", "Lunate, hamate, and pisiform; indirectly related to the articular disc."],
+    ["pisiform", "Pisiforms", "Sesamoid carpal within flexor carpi ulnaris.", "Triquetrum only."],
+    ["trapezium", "Trapezia", "Distal radial carpal with a saddle surface and tubercle.", "Scaphoid, trapezoid, and metacarpals I–II."],
+    ["trapezoid", "Trapezoids", "Small wedge-shaped distal carpal.", "Scaphoid, trapezium, capitate, and metacarpal II."],
+    ["capitate", "Capitates", "Largest central carpal with rounded head.", "Scaphoid, lunate, trapezoid, hamate, and metacarpals II–IV."],
+    ["hamate", "Hamates", "Distal ulnar carpal with a palmar hook.", "Lunate, triquetrum, capitate, and metacarpals IV–V."],
+  ].map(([id, name, landmarks, articulations]) => ({ id, name, region: "Upper limb", division: "Appendicular" as const, count: 2, landmarks, articulations, function: "Contributes to the carpal arch, wrist mobility, and transmission of forces between hand and forearm.", dental: "Carpal stability and wrist position affect precision grip, tactile control, and risk of repetitive strain during instrumentation." })),
+  { id: "metacarpals", name: "Metacarpals I–V", region: "Upper limb", division: "Appendicular", count: 10, landmarks: "Each has a base, shaft, and head; the first is short and mobile, while the second and third form a stable central pillar.", articulations: "Distal carpals proximally and proximal phalanges distally; adjacent bases articulate variably.", function: "Forms the palm, balances stability with cupping, and positions the digits for power and precision grips.", dental: "Metacarpal control supports modified pen grasp, fulcrum stability, and fine instrument movement." },
+  { id: "hand-phalanges", name: "Hand phalanges", region: "Upper limb", division: "Appendicular", count: 28, landmarks: "Proximal, middle, and distal phalanges with bases, shafts, and heads; each thumb lacks a middle phalanx.", articulations: "Metacarpals at MCP joints and adjacent phalanges at IP joints.", function: "Produces digit positioning, opposition-assisted pinch, precision grip, and tactile manipulation.", dental: "Directly responsible for instrument grasp, finger rests, controlled stroke generation, and tactile sensitivity." },
+  { id: "hip-bone", name: "Hip bones", region: "Pelvic girdle", division: "Appendicular", count: 2, landmarks: "Fused ilium, ischium, and pubis; acetabulum, obturator foramen, iliac crest, ASIS, ischial spine and tuberosity, pubic symphyseal surface.", articulations: "Sacrum, opposite hip bone at the pubic symphysis, and femoral head.", function: "Transfers trunk weight to the lower limbs, protects pelvic viscera, and anchors trunk and limb muscles.", dental: "Pelvic position establishes the seated base that determines lumbar support and upper-body posture." },
+  { id: "femur", name: "Femora", region: "Lower limb", division: "Appendicular", count: 2, landmarks: "Head and fovea, neck, greater and lesser trochanters, linea aspera, condyles, epicondyles, and intercondylar fossa.", articulations: "Hip bone at the acetabulum, tibia at the knee, and patella anteriorly.", function: "Transfers body weight through the thigh and provides long lever arms for locomotion.", dental: sharedLimbDental },
+  { id: "patella", name: "Patellae", region: "Lower limb", division: "Appendicular", count: 2, landmarks: "Base, apex, anterior surface, and medial and lateral posterior articular facets.", articulations: "Femoral trochlear surface.", function: "Increases quadriceps leverage and protects the anterior knee.", dental: sharedLimbDental },
+  { id: "tibia", name: "Tibiae", region: "Lower limb", division: "Appendicular", count: 2, landmarks: "Medial/lateral condyles, intercondylar eminence, tibial tuberosity, anterior crest, soleal line, fibular notch, and medial malleolus.", articulations: "Femur, fibula proximally and distally, and talus.", function: "Primary weight-bearing bone of the leg and a major stabilizer of knee and ankle.", dental: sharedLimbDental },
+  { id: "fibula", name: "Fibulae", region: "Lower limb", division: "Appendicular", count: 2, landmarks: "Head, neck, shaft, interosseous border, and lateral malleolus.", articulations: "Tibia proximally and distally and talus at the ankle; does not articulate with the femur.", function: "Stabilizes the ankle and provides muscle attachment while carrying limited axial load.", dental: sharedLimbDental },
+  ...[
+    ["talus", "Tali", "Body, neck, head, trochlea, and posterior process.", "Tibia, fibula, calcaneus, and navicular."],
+    ["calcaneus", "Calcanei", "Calcaneal tuberosity, sustentaculum tali, peroneal trochlea, and talar facets.", "Talus and cuboid."],
+    ["navicular", "Naviculars", "Concave proximal surface and medial tuberosity.", "Talus and the three cuneiforms; often cuboid."],
+    ["cuboid", "Cuboids", "Groove for fibularis longus and plantar tuberosity.", "Calcaneus, lateral cuneiform, navicular, and metatarsals IV–V."],
+    ["medial-cuneiform", "Medial cuneiforms", "Largest cuneiform with a broad plantar base.", "Navicular, intermediate cuneiform, and metatarsals I–II."],
+    ["intermediate-cuneiform", "Intermediate cuneiforms", "Small wedge with a narrow dorsal base.", "Navicular, medial/lateral cuneiforms, and metatarsal II."],
+    ["lateral-cuneiform", "Lateral cuneiforms", "Wedge-shaped lateral member of the cuneiform row.", "Navicular, intermediate cuneiform, cuboid, and metatarsals II–IV."],
+  ].map(([id, name, landmarks, articulations]) => ({ id, name, region: "Lower limb", division: "Appendicular" as const, count: 2, landmarks, articulations, function: "Contributes to the hindfoot or midfoot arches, load transfer, balance, and adaptation to the ground.", dental: "Foot support and balanced loading provide the stable base required for neutral seated or standing clinical posture." })),
+  { id: "metatarsals", name: "Metatarsals I–V", region: "Lower limb", division: "Appendicular", count: 10, landmarks: "Bases, shafts, and heads; first is robust, fifth has a prominent tuberosity.", articulations: "Tarsal bones proximally, proximal phalanges distally, and adjacent metatarsal bases.", function: "Forms the forefoot and supports longitudinal and transverse arches during stance and propulsion.", dental: "Balanced forefoot support helps maintain a stable operator base and reduces compensatory spinal posture." },
+  { id: "foot-phalanges", name: "Foot phalanges", region: "Lower limb", division: "Appendicular", count: 28, landmarks: "Proximal, middle, and distal phalanges; each great toe lacks a middle phalanx.", articulations: "Metatarsals at MTP joints and adjacent phalanges at IP joints.", function: "Supports balance, weight transfer, and propulsion during gait.", dental: "Toe support contributes to balance during standing care and to a stable seated foot position." },
+];
+
 const toothTissueModel: Model3D = {
   uid: "9cc281349c314cc4859e26af238f9cd5",
   title: "Tooth cross-section: enamel, dentin, pulp, and neurovascular bundle",
@@ -836,34 +919,32 @@ function inferOriginalPreset(model: Model3D, label?: string): AnatomyPreset {
 }
 
 function ModelFrame({ model, label, originalPreset }: { model: Model3D; label?: string; originalPreset?: AnatomyPreset }) {
-  const [view, setView] = useState<"original" | "classic">("original");
   const preset = originalPreset ?? inferOriginalPreset(model, label);
+
   return <div className="modelStage">
-    <div className="viewerModeSwitch" aria-label="Choose model version">
-      <button className={view === "original" ? "active" : ""} onClick={() => setView("original")}><span>◆</span> Original 3D</button>
-      <button className={view === "classic" ? "active" : ""} onClick={() => setView("classic")}><span>↗</span> Classic model</button>
+    <div className="clinicalModelBanner">
+      <div>
+        <span>PRIMARY STUDY MODEL</span>
+        <b>{preset === "dentition" ? "CT-derived complete permanent dentition" : model.title}</b>
+      </div>
+      <small>Rotate · zoom · pan · double-click to focus · fullscreen for close study</small>
     </div>
-    {view === "original" ? (
-      <OriginalAnatomyViewer preset={preset} label={label ?? model.title} />
-    ) : (
-      <>
-        <iframe
-          key={model.uid}
-          title={model.title}
-          src={`https://sketchfab.com/models/${model.uid}/embed?autostart=1&ui_theme=dark&dnt=1&ui_infos=0`}
-          allow="autoplay; fullscreen; xr-spatial-tracking"
-          allowFullScreen
-        />
-        <div className="modelMeta">
-          <span><b>{label ?? model.title}</b><small>{model.title}</small></span>
-          <span className="modelControls">Drag to rotate · Scroll/pinch to zoom · Fullscreen available</span>
-        </div>
-        <div className="modelCredit">
-          <span>Classic 3D model: {model.creator}. Hosted by Sketchfab. {model.note}</span>
-          <a href={`https://sketchfab.com/3d-models/${model.uid}`} target="_blank" rel="noreferrer">Model source ↗</a>
-        </div>
-      </>
-    )}
+    <iframe
+      key={model.uid}
+      title={model.title}
+      src={`https://sketchfab.com/models/${model.uid}/embed?autostart=1&preload=1&ui_theme=dark&dnt=1&ui_infos=0&ui_annotations=1&ui_inspector=1&ui_controls=1&ui_fullscreen=1&ui_help=1`}
+      allow="autoplay; fullscreen; xr-spatial-tracking"
+      loading="eager"
+      allowFullScreen
+    />
+    <div className="modelMeta">
+      <span><b>{label ?? model.title}</b><small>{model.title}</small></span>
+      <span className="modelControls">Patient-independent educational specimen · Natural variation exists</span>
+    </div>
+    <div className="modelCredit">
+      <span>Detailed source model: {model.creator}. Hosted by Sketchfab. {model.note}</span>
+      <a href={`https://sketchfab.com/3d-models/${model.uid}`} target="_blank" rel="noreferrer">Model source ↗</a>
+    </div>
   </div>;
 }
 
@@ -972,9 +1053,20 @@ function SkeletonAtlas() {
   const [selectedId, setSelectedId] = useState("C1");
   const [region, setRegion] = useState("All");
   const [modelIndex, setModelIndex] = useState(0);
+  const [selectedBoneId, setSelectedBoneId] = useState("mandible");
+  const [boneRegion, setBoneRegion] = useState("All");
+  const [boneQuery, setBoneQuery] = useState("");
   const selected = vertebrae.find((v) => v.id === selectedId) ?? vertebrae[0];
   const regions = ["All", "Cervical", "Thoracic", "Lumbar", "Sacral", "Coccygeal"];
   const visible = region === "All" ? vertebrae : vertebrae.filter((v) => v.region === region);
+  const selectedBone = boneAtlas.find((bone) => bone.id === selectedBoneId) ?? boneAtlas[0];
+  const boneRegions = ["All", ...Array.from(new Set(boneAtlas.map((bone) => bone.region)))];
+  const normalizedBoneQuery = boneQuery.trim().toLowerCase();
+  const visibleBones = boneAtlas.filter((bone) =>
+    (boneRegion === "All" || bone.region === boneRegion) &&
+    (!normalizedBoneQuery || `${bone.id} ${bone.name} ${bone.region} ${bone.landmarks}`.toLowerCase().includes(normalizedBoneQuery))
+  );
+  const accountedBones = boneAtlas.reduce((sum, bone) => sum + bone.count, 0);
 
   function chooseVertebra(id: string) {
     setSelectedId(id);
@@ -1001,6 +1093,52 @@ function SkeletonAtlas() {
         <div><b>126</b><span>appendicular skeleton</span></div>
         <div><b>33</b><span>vertebral levels before fusion</span></div>
         <div><b>24</b><span>mobile presacral vertebrae</span></div>
+      </div>
+    </section>
+
+    <section className="wholeBoneAtlas">
+      <div className="sectionHeading">
+        <span className="selectedPill">206-BONE EXPLORER</span>
+        <h2>Every region of the adult skeleton</h2>
+        <p>The catalog accounts for the standard {accountedBones}-bone adult skeleton. Paired and serial bones are grouped for navigation, while the vertebral lab below separates all developmental levels.</p>
+      </div>
+      <div className="boneAtlasToolbar">
+        <label>
+          <span>SEARCH BONES OR LANDMARKS</span>
+          <input value={boneQuery} onChange={(event) => setBoneQuery(event.target.value)} placeholder="Try mandible, foramen, carpal, talus…" />
+        </label>
+        <div>
+          <span>FILTER BY REGION</span>
+          <div className="boneRegionFilters">{boneRegions.map((item) => <button key={item} className={boneRegion === item ? "on" : ""} onClick={() => setBoneRegion(item)}>{item}</button>)}</div>
+        </div>
+      </div>
+      <div className="boneAtlasBody">
+        <aside className="boneCatalog" aria-label="Adult skeleton bone catalog">
+          <div className="boneCatalogHeader"><b>{visibleBones.length} study entries</b><span>{visibleBones.reduce((sum, bone) => sum + bone.count, 0)} bones represented</span></div>
+          <div className="boneCatalogList">
+            {visibleBones.length ? visibleBones.map((bone) => <button key={bone.id} className={selectedBone.id === bone.id ? "on" : ""} onClick={() => setSelectedBoneId(bone.id)}>
+              <span>{bone.region} · {bone.division}</span>
+              <b>{bone.name}</b>
+              <small>{bone.count === 1 ? "1 bone" : `${bone.count} bones in the adult skeleton`}</small>
+            </button>) : <div className="emptyBoneResults"><b>No matches</b><span>Try another bone, landmark, or region.</span></div>}
+          </div>
+        </aside>
+        <article className="boneStudyCard">
+          <div className="boneTitle">
+            <div><span>{selectedBone.division.toUpperCase()} · {selectedBone.region.toUpperCase()}</span><h2>{selectedBone.name}</h2></div>
+            <div className="boneCountBadge"><b>{selectedBone.count}</b><span>{selectedBone.count === 1 ? "adult bone" : "adult bones"}</span></div>
+          </div>
+          <div className="boneStudyGrid">
+            <LearningBlock label="Recognition landmarks" text={selectedBone.landmarks} />
+            <LearningBlock label="Direct articulations" text={selectedBone.articulations} />
+            <LearningBlock label="Mechanical role & function" text={selectedBone.function} />
+            <div className="dentalBlock"><b>Dental-school connection</b><p>{selectedBone.dental}</p></div>
+          </div>
+          <div className="countingKey">
+            <b>Counting key</b>
+            <p>Axial 80 = skull 22 + auditory ossicles 6 + hyoid 1 + adult vertebral column 26 + thoracic cage 25. Appendicular 126 = pectoral girdles 4 + upper limbs 60 + pelvic girdle 2 + lower limbs 60.</p>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -1046,6 +1184,43 @@ function SkeletonAtlas() {
         <div><span>APPENDICULAR · 126</span><h3>Girdles and limbs</h3><p>Know major bones, joint surfaces, and muscle-attachment landmarks. The pectoral girdle matters clinically because scapular and shoulder position couples with cervical posture during dentistry.</p></div>
         <div><span>BONE FUNCTION</span><h3>Support, protection, leverage, storage</h3><p>Bone supports soft tissues, protects organs, supplies lever arms, stores calcium and phosphate, and houses marrow. Cortical and trabecular architecture adapt to mechanical loading.</p></div>
         <div><span>DENTAL INTEGRATION</span><h3>Posture, airway, imaging, anesthesia</h3><p>Connect cervical levels to the hyoid, larynx, pharynx, vertebral arteries, cervical nerves, and operator posture. Use bony landmarks to orient panoramic, cephalometric, CBCT, and head-and-neck images.</p></div>
+      </div>
+    </section>
+
+    <section className="skeletalSystemsLab">
+      <div className="sectionHeading"><span className="selectedPill">BONE + JOINT BIOLOGY</span><h2>From tissue organization to movement</h2><p>Osteology is more than naming bones. Pair gross landmarks with tissue, cells, joint type, load, and remodeling.</p></div>
+      <div className="skeletalConceptColumns">
+        <div className="conceptPanel">
+          <span>CELLULAR & TISSUE LEVEL</span>
+          {[
+            ["Cortical bone", "Dense osteonal shell that resists bending and torsion; thick where high structural stiffness is required."],
+            ["Trabecular bone", "A lattice aligned with habitual load paths; reduces mass and houses marrow spaces."],
+            ["Osteoblast → osteocyte", "Osteoblasts deposit osteoid; embedded cells become osteocytes that sense strain through the lacunocanalicular network."],
+            ["Osteoclast", "Multinucleated resorptive cell that acidifies and removes mineralized matrix during growth, repair, and remodeling."],
+            ["Periosteum & endosteum", "Vascular cellular linings on outer and inner bone surfaces; important for appositional growth, repair, and remodeling."],
+            ["Woven → lamellar bone", "Rapid woven bone is replaced by organized lamellar bone as healing and mechanical adaptation progress."],
+          ].map(([name, text]) => <article key={name}><b>{name}</b><p>{text}</p></article>)}
+        </div>
+        <div className="conceptPanel">
+          <span>JOINT CLASSIFICATION</span>
+          {[
+            ["Fibrous · suture", "Dense connective tissue joins skull bones; morphology includes serrate, plane, and squamous patterns."],
+            ["Fibrous · gomphosis", "Periodontal ligament suspends a tooth root in its alveolus—the skeletal joint most directly tied to dentistry."],
+            ["Cartilaginous", "Synchondroses use hyaline cartilage; symphyses use fibrocartilage, as in intervertebral discs and the pubic symphysis."],
+            ["Synovial · hinge / pivot", "Hinge joints favor one axis; pivot joints permit rotation, exemplified by the median atlantoaxial joint."],
+            ["Synovial · condyloid / saddle", "Condyloid joints allow biaxial motion; saddle surfaces permit wide movement, as at the thumb CMC joint."],
+            ["Synovial · ball-and-socket / plane", "Ball-and-socket joints are multiaxial; plane joints glide, as at many carpal, tarsal, and facet joints."],
+          ].map(([name, text]) => <article key={name}><b>{name}</b><p>{text}</p></article>)}
+        </div>
+      </div>
+      <div className="remodelingSequence" aria-label="Bone remodeling sequence">
+        {[
+          ["1", "Activation", "Mechanical or biochemical signals recruit a remodeling unit."],
+          ["2", "Resorption", "Osteoclasts remove a controlled volume of mineralized matrix."],
+          ["3", "Reversal", "The surface is prepared and resorption transitions to formation."],
+          ["4", "Formation", "Osteoblasts deposit osteoid that subsequently mineralizes."],
+          ["5", "Adaptation", "New lamellar architecture responds to load and local biology."],
+        ].map(([number, name, text]) => <div key={number}><span>{number}</span><b>{name}</b><p>{text}</p></div>)}
       </div>
     </section>
 

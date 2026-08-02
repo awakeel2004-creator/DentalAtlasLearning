@@ -3,17 +3,17 @@
 An interactive, static learning atlas for dental anatomy, head and neck anatomy,
 whole-body anatomy, osteology, histology, and foundational oral pathology.
 
-## Two model modes
+## Learning models
 
-- **Original 3D** is a native WebGL educational reconstruction built for this
-  project. It supports selectable structures, layer visibility, explode mode,
-  transparency, motion, labels, definitions, and functions.
-- **Classic model** preserves the previously embedded third-party model in each
-  section for comparison and additional study.
+- Detailed third-party 3D specimens are embedded for teeth, complete arches,
+  the skull, head and neck, skeleton, spine, body systems, and selected tissues.
+- The earlier procedurally generated anatomy model has been removed because it
+  was not realistic enough for serious anatomical study.
+- The skeleton section includes a searchable 206-bone adult catalog, all 33
+  vertebral levels, articulations, landmarks, functions, and dental relevance.
 
-The original geometry is intentionally identified in the interface as an
-invented educational reconstruction. It is not a patient scan, validated
-anatomical specimen, diagnostic product, or surgical planning tool.
+This is an educational study aid, not a diagnostic product or surgical-planning
+tool. Verify anatomy with faculty-approved specimens, imaging, and textbooks.
 
 ## Run locally
 
@@ -22,7 +22,7 @@ npm install
 npm run dev
 ```
 
-The production build is a static export suitable for GitHub Pages:
+The production build is a static export suitable for Vercel or GitHub Pages:
 
 ```bash
 npm run lint
@@ -32,6 +32,13 @@ npm run build
 Interactive dental anatomy, skeletal anatomy, histology, and pathology study atlas.
 
 ## Free public deployment
+
+### Vercel
+
+Import this repository into Vercel. The default Next.js settings work without
+extra environment variables, and each push to `main` triggers a deployment.
+
+### GitHub Pages
 
 This repository is configured for GitHub Pages. After the repository is pushed:
 
